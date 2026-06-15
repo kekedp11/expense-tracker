@@ -3,6 +3,7 @@ import authMiddleware from "../middleware/authMiddleware.js";
 import {
   createTransaction,
   getTransactions,
+  getSummary,
   updateTransaction,
   deleteTransaction,
 } from "../controllers/transactionController.js";
@@ -19,6 +20,12 @@ router.get(
   "/",
   authMiddleware,
   getTransactions
+);
+
+router.get(
+  "/summary",
+  authMiddleware,
+  getSummary
 );
 
 router.put(

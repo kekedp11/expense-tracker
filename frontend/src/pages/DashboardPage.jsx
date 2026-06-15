@@ -1,4 +1,13 @@
-import { useEffect, useState } from "react";
+import {
+  useEffect,
+  useState
+} from "react";
+
+import { Pie } from "react-chartjs-2";
+import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
+
+ChartJS.register(ArcElement, Tooltip, Legend);
+
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
 import "./DashboardPage.css";
@@ -15,6 +24,12 @@ function DashboardPage() {
 
   const [amount, setAmount] =
     useState("");
+
+  const [searchTerm, setSearchTerm] =
+    useState("");
+
+  const [selectedCategory, setSelectedCategory] =
+    useState("all");
 
   const [type, setType] =
     useState("expense");
@@ -180,15 +195,91 @@ function DashboardPage() {
     ).format(number);
   };
 
+  const categories = [
+    "all",
+    ...new Set(
+      transactions.map(
+        (transaction) =>
+          transaction.category
+      )
+    ),
+  ];
+
+  const filteredTransactions =
+  transactions.filter(
+    (transaction) => {
+      const matchesCategory =
+        selectedCategory === "all" ||
+        transaction.category ===
+          selectedCategory;
+
+      const matchesSearch =
+        transaction.title
+          .toLowerCase()
+          .includes(
+            searchTerm.toLowerCase()
+          );
+
+      return (
+        matchesCategory &&
+        matchesSearch
+      );
+    }
+  );
+
   if (!dashboard) {
     return <h1>Loading...</h1>;
   }
+
+  const pieData = {
+    labels: ["Income", "Expense"],
+    datasets: [
+      {
+        data: [dashboard.income, dashboard.expense],
+        backgroundColor: ["#22c55e", "#ef4444"],
+        borderWidth: 2,
+      },
+    ],
+  };
+
+  const chartData = [
+        {
+          type: "Income",
+          value: dashboard.income,
+        },
+        {
+          type: "Expense",
+          value: dashboard.expense,
+        },
+      ];
 
   return (
   <div className="dashboard">
       <h1>Dashboard</h1>
 
       <div className="summary">
+      <div style={{
+        maxWidth: "350px",
+        margin: "30px auto",
+        padding: "20px",
+        borderRadius: "12px",
+        background: "#fff",
+        boxShadow: "0 4px 20px rgba(0,0,0,0.08)"
+      }}>
+        <h2>Income vs Expense</h2>
+
+        <Pie
+          data={pieData}
+          options={{
+            cutout: "65%",
+            plugins: {
+              legend: {
+                position: "bottom",
+              },
+            },
+          }}
+        />
+      </div>
         <div className="card income-card">
           <h3>Income</h3>
           <p>
@@ -219,14 +310,70 @@ function DashboardPage() {
 
       <h2>Transactions</h2>
 
-      {transactions.map((transaction) => (
+      <input
+        type="text"
+        placeholder="Search transaction..."
+        value={searchTerm}
+        onChange={(e) =>
+          setSearchTerm(
+            e.target.value
+          )
+        }
+      />
+
+      <br />
+      <br />
+
+      <select
+        value={selectedCategory}
+        onChange={(e) =>
+          setSelectedCategory(
+            e.target.value
+          )
+        }
+      >
+        {categories.map((category) => (
+          <option
+            key={category}
+            value={category}
+          >
+            {category}
+          </option>
+        ))}
+      </select>
+
+      <br />
+      <br />
+
+      {filteredTransactions.length === 0 ? (
+        <p>
+          No transactions found.
+        </p>
+      ) : (
+        filteredTransactions.map(
+          (transaction) => (         
         <div
           key={transaction._id}
-          className="transaction-card"
+          className={`transaction-card ${
+            transaction.type
+          }`}
         >
           <h3>{transaction.title}</h3>
 
-          <p>
+          <p className="category">
+            {transaction.category}
+          </p>
+
+          <p className="date">
+            {new Date(
+              transaction.date
+            ).toLocaleDateString("id-ID")}
+          </p>
+
+          <p className="amount">
+            {transaction.type === "income"
+              ? "+ "
+              : "- "}
             Rp{" "}
             {formatRupiah(
               transaction.amount
@@ -235,9 +382,7 @@ function DashboardPage() {
 
           <button
             onClick={() =>
-              handleEditTransaction(
-                transaction
-              )
+              handleEditTransaction(transaction)
             }
           >
             Edit
@@ -253,7 +398,8 @@ function DashboardPage() {
             Delete
           </button>
         </div>
-      ))}
+      ))
+      )}
 
       <h2>Add Transaction</h2>
 

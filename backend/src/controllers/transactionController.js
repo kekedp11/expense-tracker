@@ -75,3 +75,21 @@ export const deleteTransaction = async (
     });
   }
 };
+
+export const getSummary = async (
+  req,
+  res
+) => {
+  try {
+    const summary =
+      await transactionService.getSummary(
+        req.user.userId
+      );
+
+    res.json(summary);
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
+};
