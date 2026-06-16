@@ -1,104 +1,133 @@
 body {
-  font-family: Arial, sans-serif;
+  margin: 0;
+  font-family: "Poppins", sans-serif;
+  background: #f5f6fa;
 }
 
-.dashboard {
-  max-width: 800px;
-  margin: 40px auto;
-  padding: 20px;
-}
-
-.summary {
+/* APP */
+.app {
   display: flex;
+  height: 100vh;
+}
+
+/* SIDEBAR */
+.sidebar {
+  width: 220px;
+  background: #111827;
+  color: white;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.sidebar nav p {
+  padding: 10px;
+  cursor: pointer;
+  color: #9ca3af;
+}
+
+.sidebar nav p.active {
+  background: #1f2937;
+  border-radius: 8px;
+  color: white;
+}
+
+.logout {
+  background: #ef4444;
+  border: none;
+  padding: 10px;
+  color: white;
+  border-radius: 10px;
+}
+
+/* MAIN */
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* TOPBAR */
+.topbar {
+  height: 60px;
+  background: white;
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  font-weight: bold;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+/* CONTENT */
+.content {
+  padding: 20px;
+  overflow-y: auto;
+}
+
+/* CARDS */
+.cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: 15px;
-  margin-bottom: 30px;
 }
 
 .card {
-  flex: 1;
-  padding: 20px;
-  border: 1px solid #ddd;
-  border-radius: 10px;
-  text-align: center;
+  background: white;
+  padding: 15px;
+  border-radius: 12px;
 }
 
-.card h3 {
-  margin-bottom: 10px;
+.income { border-left: 5px solid #22c55e; }
+.expense { border-left: 5px solid #ef4444; }
+.balance { border-left: 5px solid #3b82f6; }
+
+/* CHART */
+.chart {
+  margin-top: 20px;
 }
 
-.card p {
-  font-size: 20px;
-  font-weight: bold;
+.chart-box {
+  background: white;
+  padding: 15px;
+  border-radius: 12px;
+  max-height: 300px;
 }
 
-form {
-  margin-bottom: 30px;
+/* FILTER */
+.filter {
+  display: flex;
+  gap: 10px;
 }
 
-input,
-select {
-  width: 100%;
+.filter input,
+.filter select {
   padding: 10px;
-  margin-top: 5px;
+  flex: 1;
+  border-radius: 10px;
+  border: 1px solid #ddd;
+}
+
+/* LIST */
+.list {
+  margin-top: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.item {
+  background: white;
+  padding: 12px;
+  border-radius: 12px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.right {
+  text-align: right;
 }
 
 button {
-  padding: 10px 15px;
-  margin-right: 10px;
-  cursor: pointer;
-}
-
-.transaction-card {
-  border: 1px solid #ddd;
-  border-radius: 10px;
-  padding: 15px;
-  margin-bottom: 10px;
-}
-
-.income-card {
-  background-color: #e8f5e9;
-}
-
-.expense-card {
-  background-color: #ffebee;
-}
-
-.balance-card {
-  background-color: #e3f2fd;
-}
-
-.transaction-card.income {
-  border-left: 6px solid #4caf50;
-}
-
-.transaction-card.expense {
-  border-left: 6px solid #f44336;
-}
-
-.amount {
-  font-size: 18px;
-  font-weight: bold;
-  margin-top: 10px;
-}
-
-.transaction-card.income .amount {
-  color: #2e7d32;
-}
-
-.transaction-card.expense .amount {
-  color: #c62828;
-}
-
-.category {
-  display: inline-block;
-  padding: 3px 8px;
-  background: #eee;
-  border-radius: 6px;
-  font-size: 12px;
-  margin-top: 5px;
-}
-
-.date {
-  font-size: 12px;
-  color: gray;
+  margin-left: 5px;
 }

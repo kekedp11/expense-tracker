@@ -1,75 +1,67 @@
+import { useEffect, useState } from "react";
+import { Pie, Line } from "react-chartjs-2";
 import {
-  useEffect,
-  useState
-} from "react";
-
-import { Pie } from "react-chartjs-2";
-import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
-
-ChartJS.register(ArcElement, Tooltip, Legend);
+  Chart as ChartJS,
+  ArcElement,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Tooltip,
+  Legend,
+} from "chart.js";
 
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
 import "./DashboardPage.css";
 
+ChartJS.register(
+  ArcElement,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Tooltip,
+  Legend
+);
+
 function DashboardPage() {
-  const [dashboard, setDashboard] =
-    useState(null);
+  const [dashboard, setDashboard] = useState(null);
+  const [transactions, setTransactions] = useState([]);
 
-  const [transactions, setTransactions] =
-    useState([]);
+  const [activeTab, setActiveTab] = useState("dashboard");
 
-  const [title, setTitle] =
-    useState("");
+  const [title, setTitle] = useState("");
+  const [amount, setAmount] = useState("");
+  const [type, setType] = useState("expense");
+  const [category, setCategory] = useState("");
 
-  const [amount, setAmount] =
-    useState("");
-
-  const [searchTerm, setSearchTerm] =
-    useState("");
-
-  const [selectedCategory, setSelectedCategory] =
-    useState("all");
-
-  const [type, setType] =
-    useState("expense");
-
-  const [category, setCategory] =
-    useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("all");
 
   const navigate = useNavigate();
+  const token = localStorage.getItem("token");
 
   useEffect(() => {
-    const fetchDashboard = async () => {
+    const fetchData = async () => {
       try {
-        const token =
-          localStorage.getItem("token");
+        const [dashRes, txRes] = await Promise.all([
+          api.get("/dashboard", {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          api.get("/transactions", {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+        ]);
 
-        const response =
-          await api.get("/dashboard", {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          });
-
-        setDashboard(response.data);
-
-        const transactionResponse =
-          await api.get("/transactions", {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          });
-
-        setTransactions(
-          transactionResponse.data
-        );
-      } catch (error) {
-        console.log(error);
+        setDashboard(dashRes.data);
+        setTransactions(txRes.data);
+      } catch (err) {
+        console.log(err);
       }
     };
 
-    fetchDashboard();
+    fetchData();
   }, []);
 
   const handleLogout = () => {
@@ -77,159 +69,70 @@ function DashboardPage() {
     navigate("/");
   };
 
-  const handleAddTransaction =
-    async (e) => {
-      e.preventDefault();
-
-      try {
-        const token =
-          localStorage.getItem("token");
-
-        await api.post(
-          "/transactions",
-          {
-            title,
-            amount: Number(amount),
-            type,
-            category,
-            date: new Date()
-          },
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-
-        window.location.reload();
-      } catch (error) {
-        console.log(error);
-      }
-    };
-
-    const handleDeleteTransaction =
-      async (id) => {
-
-        if (
-          !window.confirm(
-            "Yakin ingin menghapus transaksi ini?"
-          )
-        ) {
-          return;
-        }
-
-        try {
-          const token =
-            localStorage.getItem("token");
-
-          await api.delete(
-            `/transactions/${id}`,
-            {
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-            }
-          );
-
-          window.location.reload();
-        } catch (error) {
-          console.log(error);
-        }
-      };
-
-  const handleEditTransaction =
-  async (transaction) => {
-    const newTitle =
-      prompt(
-        "Edit title",
-        transaction.title
-      );
-
-    const newAmount =
-      prompt(
-        "Edit amount",
-        transaction.amount
-      );
-
-    if (
-      !newTitle ||
-      !newAmount
-    ) {
-      return;
-    }
+  const handleAddTransaction = async (e) => {
+    e.preventDefault();
 
     try {
-      const token =
-        localStorage.getItem("token");
-
-      await api.put(
-        `/transactions/${transaction._id}`,
+      const res = await api.post(
+        "/transactions",
         {
-          title: newTitle,
-          amount:
-            Number(newAmount),
-          type:
-            transaction.type,
-          category:
-            transaction.category,
-          date:
-            transaction.date,
+          title,
+          amount: Number(amount),
+          type,
+          category,
+          date: new Date(),
         },
         {
-          headers: {
-            Authorization:
-              `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         }
       );
 
-      window.location.reload();
-    } catch (error) {
-      console.log(error);
+      setTransactions((prev) => [...prev, res.data]);
+
+      setTitle("");
+      setAmount("");
+      setCategory("");
+      setType("expense");
+    } catch (err) {
+      console.log(err);
     }
   };
 
-  const formatRupiah = (number) => {
-    return new Intl.NumberFormat(
-      "id-ID"
-    ).format(number);
+  const handleDelete = async (id) => {
+    if (!window.confirm("Delete transaction?")) return;
+
+    await api.delete(`/transactions/${id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    setTransactions((prev) => prev.filter((t) => t._id !== id));
   };
 
-  const categories = [
-    "all",
-    ...new Set(
-      transactions.map(
-        (transaction) =>
-          transaction.category
+  const handleEdit = async (t) => {
+    const newTitle = prompt("Edit title", t.title);
+    const newAmount = prompt("Edit amount", t.amount);
+
+    if (!newTitle || !newAmount) return;
+
+    await api.put(
+      `/transactions/${t._id}`,
+      { ...t, title: newTitle, amount: Number(newAmount) },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    setTransactions((prev) =>
+      prev.map((item) =>
+        item._id === t._id
+          ? { ...item, title: newTitle, amount: Number(newAmount) }
+          : item
       )
-    ),
-  ];
+    );
+  };
 
-  const filteredTransactions =
-  transactions.filter(
-    (transaction) => {
-      const matchesCategory =
-        selectedCategory === "all" ||
-        transaction.category ===
-          selectedCategory;
+  const formatRupiah = (n) =>
+    new Intl.NumberFormat("id-ID").format(n);
 
-      const matchesSearch =
-        transaction.title
-          .toLowerCase()
-          .includes(
-            searchTerm.toLowerCase()
-          );
-
-      return (
-        matchesCategory &&
-        matchesSearch
-      );
-    }
-  );
-
-  if (!dashboard) {
-    return <h1>Loading...</h1>;
-  }
+  if (!dashboard) return <h2 className="loading">Loading...</h2>;
 
   const pieData = {
     labels: ["Income", "Expense"],
@@ -237,237 +140,183 @@ function DashboardPage() {
       {
         data: [dashboard.income, dashboard.expense],
         backgroundColor: ["#22c55e", "#ef4444"],
-        borderWidth: 2,
       },
     ],
   };
 
-  const chartData = [
-        {
-          type: "Income",
-          value: dashboard.income,
-        },
-        {
-          type: "Expense",
-          value: dashboard.expense,
-        },
-      ];
+  const monthlyData = {
+    labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+    datasets: [
+      {
+        label: "Income",
+        data: [5000, 4500, 6000, 5500, 7000, 6500],
+        borderColor: "#22c55e",
+      },
+      {
+        label: "Expense",
+        data: [2000, 3000, 2500, 1800, 3500, 2700],
+        borderColor: "#ef4444",
+      },
+    ],
+  };
+
+  const categories = [
+    "all",
+    ...new Set(transactions.map((t) => t.category)),
+  ];
+
+  const filtered = transactions.filter((t) => {
+    const matchCat =
+      selectedCategory === "all" || t.category === selectedCategory;
+
+    const matchSearch = t.title
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase());
+
+    return matchCat && matchSearch;
+  });
 
   return (
-  <div className="dashboard">
-      <h1>Dashboard</h1>
+    <div className="app">
 
-      <div className="summary">
-      <div style={{
-        maxWidth: "350px",
-        margin: "30px auto",
-        padding: "20px",
-        borderRadius: "12px",
-        background: "#fff",
-        boxShadow: "0 4px 20px rgba(0,0,0,0.08)"
-      }}>
-        <h2>Income vs Expense</h2>
+      {/* SIDEBAR */}
+      <aside className="sidebar">
+        <h2>FinTrack</h2>
 
-        <Pie
-          data={pieData}
-          options={{
-            cutout: "65%",
-            plugins: {
-              legend: {
-                position: "bottom",
-              },
-            },
-          }}
-        />
-      </div>
-        <div className="card income-card">
-          <h3>Income</h3>
-          <p>
-            Rp {formatRupiah(
-              dashboard.income
-            )}
-          </p>
-        </div>
-
-        <div className="card expense-card">
-          <h3>Expense</h3>
-          <p>
-            Rp {formatRupiah(
-              dashboard.expense
-            )}
-          </p>
-        </div>
-
-        <div className="card balance-card">
-          <h3>Balance</h3>
-          <p>
-            Rp {formatRupiah(
-              dashboard.balance
-            )}
-          </p>
-        </div>
-      </div>
-
-      <h2>Transactions</h2>
-
-      <input
-        type="text"
-        placeholder="Search transaction..."
-        value={searchTerm}
-        onChange={(e) =>
-          setSearchTerm(
-            e.target.value
-          )
-        }
-      />
-
-      <br />
-      <br />
-
-      <select
-        value={selectedCategory}
-        onChange={(e) =>
-          setSelectedCategory(
-            e.target.value
-          )
-        }
-      >
-        {categories.map((category) => (
-          <option
-            key={category}
-            value={category}
+        <nav>
+          <p
+            className={activeTab === "dashboard" ? "active" : ""}
+            onClick={() => setActiveTab("dashboard")}
           >
-            {category}
-          </option>
-        ))}
-      </select>
-
-      <br />
-      <br />
-
-      {filteredTransactions.length === 0 ? (
-        <p>
-          No transactions found.
-        </p>
-      ) : (
-        filteredTransactions.map(
-          (transaction) => (         
-        <div
-          key={transaction._id}
-          className={`transaction-card ${
-            transaction.type
-          }`}
-        >
-          <h3>{transaction.title}</h3>
-
-          <p className="category">
-            {transaction.category}
+            Dashboard
           </p>
 
-          <p className="date">
-            {new Date(
-              transaction.date
-            ).toLocaleDateString("id-ID")}
-          </p>
-
-          <p className="amount">
-            {transaction.type === "income"
-              ? "+ "
-              : "- "}
-            Rp{" "}
-            {formatRupiah(
-              transaction.amount
-            )}
-          </p>
-
-          <button
-            onClick={() =>
-              handleEditTransaction(transaction)
-            }
+          <p
+            className={activeTab === "transactions" ? "active" : ""}
+            onClick={() => setActiveTab("transactions")}
           >
-            Edit
-          </button>
+            Transactions
+          </p>
 
-          <button
-            onClick={() =>
-              handleDeleteTransaction(
-                transaction._id
-              )
-            }
+          <p
+            className={activeTab === "analytics" ? "active" : ""}
+            onClick={() => setActiveTab("analytics")}
           >
-            Delete
-          </button>
-        </div>
-      ))
-      )}
+            Analytics
+          </p>
+        </nav>
 
-      <h2>Add Transaction</h2>
-
-      <form onSubmit={handleAddTransaction}>
-        <input
-          type="text"
-          placeholder="Title"
-          value={title}
-          onChange={(e) =>
-            setTitle(e.target.value)
-          }
-        />
-
-        <br />
-        <br />
-
-        <input
-          type="number"
-          placeholder="Amount"
-          value={amount}
-          onChange={(e) =>
-            setAmount(e.target.value)
-          }
-        />
-
-        <br />
-        <br />
-
-        <select
-          value={type}
-          onChange={(e) =>
-            setType(e.target.value)
-          }
-        >
-          <option value="income">
-            Income
-          </option>
-
-          <option value="expense">
-            Expense
-          </option>
-        </select>
-
-        <br />
-        <br />
-
-        <input
-          type="text"
-          placeholder="Category"
-          value={category}
-          onChange={(e) =>
-            setCategory(e.target.value)
-          }
-        />
-
-        <br />
-        <br />
-
-        <button type="submit">
-          Add Transaction
+        <button onClick={handleLogout} className="logout">
+          Logout
         </button>
-      </form>
+      </aside>
 
-      <hr />
+      {/* MAIN */}
+      <main className="main">
 
-      <button onClick={handleLogout}>
-        Logout
-      </button>
+        {/* TOP BAR */}
+        <header className="topbar">
+          <h3>{activeTab.toUpperCase()}</h3>
+        </header>
+
+        {/* CONTENT */}
+        <section className="content">
+
+          {activeTab === "dashboard" && (
+            <>
+              <div className="cards">
+                <div className="card income">
+                  Income
+                  <p>Rp {formatRupiah(dashboard.income)}</p>
+                </div>
+
+                <div className="card expense">
+                  Expense
+                  <p>Rp {formatRupiah(dashboard.expense)}</p>
+                </div>
+
+                <div className="card balance">
+                  Balance
+                  <p>Rp {formatRupiah(dashboard.balance)}</p>
+                </div>
+              </div>
+
+              <div className="chart">
+                <h3>Income vs Expense</h3>
+                <div className="chart-box">
+                  <Pie data={pieData} />
+                </div>
+              </div>
+            </>
+          )}
+
+          {activeTab === "analytics" && (
+            <div className="chart">
+              <h3>Monthly Analytics</h3>
+              <div className="chart-box">
+                <Line data={monthlyData} />
+              </div>
+            </div>
+          )}
+
+          {activeTab === "transactions" && (
+            <>
+              <div className="filter">
+                <input
+                  placeholder="Search..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+
+                <select
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                >
+                  {categories.map((c) => (
+                    <option key={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="list">
+                {filtered.map((t) => (
+                  <div key={t._id} className={`item ${t.type}`}>
+                    <div>
+                      <h4>{t.title}</h4>
+                      <small>{t.category}</small>
+                    </div>
+
+                    <div className="right">
+                      <p>
+                        {t.type === "income" ? "+" : "-"} Rp{" "}
+                        {formatRupiah(t.amount)}
+                      </p>
+
+                      <button onClick={() => handleEdit(t)}>Edit</button>
+                      <button onClick={() => handleDelete(t._id)}>Del</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {/* FORM ALWAYS */}
+          <form onSubmit={handleAddTransaction} className="form">
+            <input placeholder="Title" value={title} onChange={(e) => setTitle(e.target.value)} />
+            <input type="number" placeholder="Amount" value={amount} onChange={(e) => setAmount(e.target.value)} />
+            <input placeholder="Category" value={category} onChange={(e) => setCategory(e.target.value)} />
+
+            <select value={type} onChange={(e) => setType(e.target.value)}>
+              <option value="income">Income</option>
+              <option value="expense">Expense</option>
+            </select>
+
+            <button type="submit">Add</button>
+          </form>
+
+        </section>
+      </main>
     </div>
   );
 }
